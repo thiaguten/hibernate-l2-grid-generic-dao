@@ -32,7 +32,7 @@ public final class PersistenceHelper {
 		// singleton
 
 		// Add JVM shutdown hook to close resource and avoid memory leaks.
-		Runtime.getRuntime().addShutdownHook(new Thread(this::close));
+//		Runtime.getRuntime().addShutdownHook(new Thread(this::close));
 	}
 
 	/**

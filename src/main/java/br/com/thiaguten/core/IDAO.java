@@ -54,6 +54,14 @@ public interface IDAO<ID extends Serializable, T extends Persistable<ID>> {
 	T save(final T entity);
 
 	/**
+	 * Create entities.
+	 *
+	 * @param entities entities to be created
+	 * @param batchSize the size of batch
+	 */
+	List<T> saveInBatch(final List<T> entities, int batchSize);
+
+	/**
 	 * Read an entity by its identifier.
 	 *
 	 * @param id entity identifier to be read
@@ -68,6 +76,14 @@ public interface IDAO<ID extends Serializable, T extends Persistable<ID>> {
 	 * @return the updated entity
 	 */
 	T update(final T entity);
+
+	/**
+	 * Update entities.
+	 *
+	 * @param entities entities to be updated
+	 * @param batchSize the size of batch
+	 */
+	List<T> updateInBatch(final List<T> entities, int batchSize);
 
 	/**
 	 * Delete an entity.

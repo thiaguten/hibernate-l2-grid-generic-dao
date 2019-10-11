@@ -15,6 +15,7 @@
   <logger name="org.hibernate.jpa" level="DEBUG"/>
   <logger name="org.hibernate.cache" level="DEBUG"/>
   <!--<logger name="org.hibernate.type" level="TRACE" />-->
+  <logger name="org.hibernate.engine.jdbc.batch.internal.BatchingBatch" level="DEBUG" />
 
   <root level="INFO">
     <appender-ref ref="STDOUT"/>

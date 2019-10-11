@@ -1,6 +1,7 @@
 package br.com.thiaguten.core;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -51,7 +52,7 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
 		this.threadLocalEntityManager = new ThreadLocal<>();
 
 		// Add JVM shutdown hook to close resource and avoid memory leaks.
-		Runtime.getRuntime().addShutdownHook(new Thread(this::closeEntityManager));
+		Runtime.getRuntime().addShutdownHook(new Thread(this::close));
 	}
 	
 	// methods for transactional control
@@ -89,6 +90,18 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
 			threadLocalEntityManager.set(null);
 		}
 	}
+
+  private final void closeEntityManagerFactory() {
+    EntityManagerFactory entityManagerFactory = getEntityManagerFactory();
+    if (entityManagerFactory != null && entityManagerFactory.isOpen()) {
+      entityManagerFactory.close();
+    }
+  }
+
+  private void close() {
+    closeEntityManager();
+    closeEntityManagerFactory();
+  }
 
 	/**
 	 * Get session factory.
@@ -172,6 +185,44 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
 	/**
 	 * {@inheritDoc}
 	 */
+  @Override
+  public List<T> saveInBatch(List<T> entities, int batchSize) {
+    EntityManager entityManager = getEntityManager();
+    try {
+      beginTransaction();
+
+      int entityCount = entities.size();
+      List<T> detachedEntities = new ArrayList<>(entityCount);
+
+      for (int i = 0; i < entityCount; i++) {
+        if (i > 0 && i % batchSize == 0) {
+          // flush a batch of inserts and release memory.
+          entityManager.flush();
+          entityManager.clear();
+        }
+
+        T entity = entities.get(i);
+        ID id = entity.getId();
+        if (id != null) {
+          entity = entityManager.merge(entity);
+        } else {
+          entityManager.persist(entity);
+        }
+
+				detachedEntities.add(entity);
+      }
+
+      commitTransaction();
+      return detachedEntities;
+    } catch (Exception e) {
+      rollbackTransaction();
+      throw e;
+    }
+  }
+
+	/**
+	 * {@inheritDoc}
+	 */
 	@Override
 	public T findById(ID id) {
 		EntityManager entityManager = getEntityManager();
@@ -204,6 +255,14 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
 	 * {@inheritDoc}
 	 */
 	@Override
+	public List<T> updateInBatch(List<T> entities, int batchSize) {
+		return saveInBatch(entities, batchSize);
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
 	public void delete(T entity) {
 		deleteByEntityOrId(persistenceClass, entity, null);
 	}
@@ -219,8 +278,6 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
 	/**
 	 * Delete an entity by its identifier.
 	 *
-	 * @param <ID>        the type of the identifier
-	 * @param <T>         the type of the entity
 	 * @param entityClazz the entity class
 	 * @param entity      the type of the entity
 	 * @param id          the entity identifier
@@ -230,12 +287,12 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
 		try {
 			beginTransaction();
 
-			if (id == null && (entity == null || entity.getId() == null)) {
+			if (null == id && (null == entity || null == entity.getId())) {
 				throw new PersistenceException("Could not delete. ID is null.");
 			}
 
 			ID _id = id;
-			if (_id == null) {
+			if (null == _id) {
 				_id = entity.getId();
 			}
 
@@ -420,7 +477,6 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
 	 * Find by criteria.
 	 *
 	 * @param criterions the criterions
-	 * @param <T>        the type of the entity
 	 * @return the list of entities
 	 */
 	public List<T> findByCriteria(List<Criterion> criterions) {
@@ -430,10 +486,9 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
 	/**
 	 * Find by criteria.
 	 *
-	 * @param criterions  the criterions
 	 * @param firstResult first result
 	 * @param maxResults  max result
-	 * @param <T>         the type of the entity
+	 * @param criterions  the criterions
 	 * @return the list of entities
 	 */
 	public List<T> findByCriteria(int firstResult, int maxResults, List<Criterion> criterions) {
@@ -443,13 +498,10 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
 	/**
 	 * Find by criteria.
 	 *
-	 * @param entityClazz the entity class
-	 * @param criterions  the criterions
 	 * @param cacheable   cacheable
 	 * @param firstResult first result
 	 * @param maxResults  max result
-	 * @param <ID>        the type of the identifier
-	 * @param <T>         the type of the entity
+	 * @param criterions  the criterions
 	 * @return the list of entities
 	 */
 	@SuppressWarnings("unchecked")

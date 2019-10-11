@@ -26,8 +26,8 @@ public class PostComment extends AbstractEntity<Long> {
   @Column(name = "POST_COMMENT_ID", updatable = false, nullable = false)
   private Long id;
 
-  @Column(name = "REVIEW", nullable = false)
-  private String review;
+  @Column(name = "COMMENT", nullable = false)
+  private String comment;
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "POST_ID", nullable = false)
@@ -37,8 +37,8 @@ public class PostComment extends AbstractEntity<Long> {
     super();
   }
 
-  public PostComment(String review) {
-    this.review = review;
+  public PostComment(String comment) {
+    this.comment = comment;
   }
 
   @Override
@@ -50,12 +50,12 @@ public class PostComment extends AbstractEntity<Long> {
     this.id = id;
   }
 
-  public String getReview() {
-    return review;
+  public String getComment() {
+    return comment;
   }
 
-  public void setReview(String review) {
-    this.review = review;
+  public void setComment(String comment) {
+    this.comment = comment;
   }
 
   public Post getPost() {
@@ -70,7 +70,7 @@ public class PostComment extends AbstractEntity<Long> {
   public String toString() {
     return "PostComment{" +
         "id=" + id +
-        ", review='" + review + '\'' +
+        ", comment='" + comment + '\'' +
         '}';
   }
 }
