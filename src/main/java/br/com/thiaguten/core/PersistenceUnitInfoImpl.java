@@ -5,6 +5,7 @@ import java.io.UncheckedIOException;
 import java.net.URL;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -24,12 +25,36 @@ import org.hibernate.jpa.HibernatePersistenceProvider;
  */
 public class PersistenceUnitInfoImpl implements PersistenceUnitInfo {
 
+	private static final String PERSISTENCE_XML_SCHEMA_VERSION = "2.1";
+
 	private final String persistenceUnitName;
 	private final Class<?>[] managedClasses;
-	private final String persistenceXMLSchemaVersion = "2.1";
-	
+	private final Properties properties;
+
+	private DataSource jtaDataSource;
+	private DataSource nonJtaDataSource;
+	private PersistenceUnitTransactionType transactionType = PersistenceUnitTransactionType.RESOURCE_LOCAL;
+
+	public static PersistenceUnitInfoImpl newJTAPersistenceUnitInfo(
+			String persistenceUnitName, Map<String, Object> map, DataSource jtaDataSource, Class<?>... managedClasses) {
+		PersistenceUnitInfoImpl persistenceUnitInfo = new PersistenceUnitInfoImpl(persistenceUnitName, map, managedClasses);
+		persistenceUnitInfo.setJtaDataSource(jtaDataSource);
+		persistenceUnitInfo.setNonJtaDataSource(null);
+		persistenceUnitInfo.setTransactionType(PersistenceUnitTransactionType.JTA);
+		return persistenceUnitInfo;
+	}
+
 	public PersistenceUnitInfoImpl(String persistenceUnitName, Class<?>... managedClasses) {
+		this(persistenceUnitName, Collections.emptyMap(), managedClasses);
+	}
+
+	public PersistenceUnitInfoImpl(String persistenceUnitName, Map<String, Object> map, Class<?>... managedClasses) {
+		Properties properties = new Properties();
+		if (map != null && !map.isEmpty()) {
+			properties.putAll(map);
+		}
 		this.persistenceUnitName = persistenceUnitName;
+		this.properties = properties;
 		this.managedClasses = managedClasses;
 	}
 
@@ -45,17 +70,29 @@ public class PersistenceUnitInfoImpl implements PersistenceUnitInfo {
 
 	@Override
 	public PersistenceUnitTransactionType getTransactionType() {
-		return PersistenceUnitTransactionType.RESOURCE_LOCAL;
+		return transactionType;
+	}
+
+	public void setTransactionType(PersistenceUnitTransactionType transactionType) {
+		this.transactionType = transactionType;
 	}
 
 	@Override
 	public DataSource getJtaDataSource() {
-		return null;
+		return jtaDataSource;
+	}
+
+	public void setJtaDataSource(DataSource jtaDataSource) {
+		this.jtaDataSource = jtaDataSource;
 	}
 
 	@Override
 	public DataSource getNonJtaDataSource() {
-		return null;
+		return nonJtaDataSource;
+	}
+
+	public void setNonJtaDataSource(DataSource nonJtaDataSource) {
+		this.nonJtaDataSource = nonJtaDataSource;
 	}
 
 	@Override
@@ -84,7 +121,7 @@ public class PersistenceUnitInfoImpl implements PersistenceUnitInfo {
 
 	@Override
 	public List<String> getManagedClassNames() {
-		return managedClasses == null 
+		return null == managedClasses
 				? Collections.emptyList() 
 				: Stream.of(managedClasses).map(Class::getName).collect(Collectors.toList());
 	}
@@ -106,12 +143,12 @@ public class PersistenceUnitInfoImpl implements PersistenceUnitInfo {
 
 	@Override
 	public Properties getProperties() {
-		return new Properties();
+		return properties;
 	}
 
 	@Override
 	public String getPersistenceXMLSchemaVersion() {
-		return persistenceXMLSchemaVersion;
+		return PERSISTENCE_XML_SCHEMA_VERSION;
 	}
 
 	@Override

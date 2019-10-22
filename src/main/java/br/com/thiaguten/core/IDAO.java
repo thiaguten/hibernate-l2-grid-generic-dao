@@ -12,7 +12,7 @@ import javax.persistence.EntityManagerFactory;
  *
  * @param <T>  the type of the persistent class
  * @param <ID> the type of the identifier
- * 
+ *
  * @author Thiago Gutenberg Carvalho da Costa
  */
 public interface IDAO<ID extends Serializable, T extends Persistable<ID>> {
@@ -26,7 +26,7 @@ public interface IDAO<ID extends Serializable, T extends Persistable<ID>> {
 
 	/**
 	 * Get entity manager factory.
-	 * 
+	 *
 	 * @return entity manager factory instance
 	 */
 	EntityManagerFactory getEntityManagerFactory();
@@ -108,7 +108,7 @@ public interface IDAO<ID extends Serializable, T extends Persistable<ID>> {
 
 	/**
 	 * Count all entities.
-	 * 
+	 *
 	 * @param cacheable enable query cache
 	 * @return the number of entities
 	 */
@@ -143,7 +143,7 @@ public interface IDAO<ID extends Serializable, T extends Persistable<ID>> {
 
 	/**
 	 * Load entities.
-	 * 
+	 *
 	 * @param cacheable   enable query cache
 	 * @param firstResult the value of first result
 	 * @param maxResults  the value of max result
@@ -153,39 +153,48 @@ public interface IDAO<ID extends Serializable, T extends Persistable<ID>> {
 
 	/**
 	 * Get the largest value by id attribute name.
-	 * 
+	 *
 	 * @return the maximum value in a set
 	 */
 	ID maxById();
 
 	/**
 	 * Get the largest value by id attribute name.
-	 * 
+	 *
 	 * @return the maximum value in a set
 	 */
 	ID maxById(String idAttributeName);
 
 	/**
 	 * Get the largest value by attribute name.
-	 * 
+	 *
 	 * @return the maximum value in a set
 	 */
 	<R> R max(String attributeName, Class<R> resultClass);
 
 	/**
 	 * Get the largest long value by id attribute name.
-	 * 
+	 *
 	 * @return the long maximum value in a set
 	 */
 	Long maxIdAsLong();
 
 	/**
 	 * Get the largest long value by id attribute name.
-	 * 
+	 *
 	 * @param idAttributeName long id attribute name
 	 * @return @return the long maximum value in a set
 	 */
 	Long maxIdAsLong(String idAttributeName);
+
+	/**
+	 * Find by query.
+	 *
+	 * @param query     the query string
+	 * @param params    the query string positional parameters
+	 * @return the list of entities
+	 */
+	List<T> findByQuery(String query, Object... params);
 
 	/**
 	 * Find by query.
@@ -199,7 +208,7 @@ public interface IDAO<ID extends Serializable, T extends Persistable<ID>> {
 
 	/**
 	 * Find by query.
-	 * 
+	 *
 	 * @param cacheable   enable query cache
 	 * @param firstResult the value of first result
 	 * @param maxResults  the value of max result
@@ -212,11 +221,32 @@ public interface IDAO<ID extends Serializable, T extends Persistable<ID>> {
 	/**
 	 * Find by query and parameters.
 	 *
+	 * @param query     the query string
+	 * @param params    the query string parameters
+	 * @return the list of entities
+	 */
+	List<T> findByQueryAndNamedParams(String query, Map<String, ?> params);
+
+	/**
+	 * Find by query and parameters.
+	 *
 	 * @param cacheable enable query cache
 	 * @param query     the query string
 	 * @param params    the query string parameters
 	 * @return the list of entities
 	 */
 	List<T> findByQueryAndNamedParams(boolean cacheable, String query, Map<String, ?> params);
+
+	/**
+	 * Find by query and parameters.
+	 *
+	 * @param cacheable enable query cache
+	 * @param firstResult the value of first result
+	 * @param maxResults  the value of max result
+	 * @param query     the query string
+	 * @param params    the query string parameters
+	 * @return the list of entities
+	 */
+	List<T> findByQueryAndNamedParams(boolean cacheable, int firstResult, int maxResults, String query, Map<String, ?> params);
 
 }

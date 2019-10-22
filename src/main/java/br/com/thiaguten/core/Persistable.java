@@ -18,4 +18,11 @@ public interface Persistable<ID extends Serializable> extends Serializable {
 	 */
 	ID getId();
 
+	/**
+	 * Set an identifier
+	 *
+	 * @param id the identifier
+	 */
+	void setId(ID id);
+
 }

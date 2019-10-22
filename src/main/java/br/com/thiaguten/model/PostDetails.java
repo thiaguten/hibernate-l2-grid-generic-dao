@@ -36,7 +36,7 @@ public class PostDetails extends AbstractEntity<Long> {
 
   // OneToOne shared primary key
   @MapsId
-  @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.REMOVE)
+  @OneToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "POST_DETAILS_ID", referencedColumnName = "POST_ID", nullable = false)
   private Post post;
 
@@ -54,6 +54,7 @@ public class PostDetails extends AbstractEntity<Long> {
     return id;
   }
 
+  @Override
   public void setId(Long id) {
     this.id = id;
   }

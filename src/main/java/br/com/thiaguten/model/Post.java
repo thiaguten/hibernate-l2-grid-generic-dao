@@ -11,7 +11,6 @@ import javax.persistence.FetchType;
 import javax.persistence.Id;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
-import javax.persistence.PrimaryKeyJoinColumn;
 import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
@@ -25,15 +24,12 @@ public class Post extends AbstractEntity<Long> {
   private static final long serialVersionUID = 8868996711999017043L;
 
   @Id
-//  @GeneratedValue
   @Column(name = "POST_ID", updatable = false, nullable = false)
   private Long id;
 
   @Column(name = "TITLE", nullable = false, length = 200)
   private String title;
 
-  // OneToOne shared primary key
-  @PrimaryKeyJoinColumn
   @OneToOne(mappedBy = "post", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
   private PostDetails postDetails;
 
@@ -54,6 +50,7 @@ public class Post extends AbstractEntity<Long> {
     return id;
   }
 
+  @Override
   public void setId(Long id) {
     this.id = id;
   }
@@ -85,11 +82,6 @@ public class Post extends AbstractEntity<Long> {
   public List<PostComment> getPostComments() {
     return postComments;
   }
-
-//  public void setPostComments(List<PostComment> postComments) {
-//    postComments.forEach(this::addPostComment);
-//    this.postComments = postComments;
-//  }
 
   public void addPostComment(PostComment postComment) {
     // used to synchronize both sides of the bidirectional association

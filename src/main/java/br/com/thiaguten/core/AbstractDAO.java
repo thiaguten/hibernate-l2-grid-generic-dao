@@ -36,7 +36,6 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
 
 	private final Class<T> persistenceClass;
 	private final Class<ID> identifierClass;
-	private final EntityManagerFactory entityManagerFactory;
 	private final ThreadLocal<EntityManager> threadLocalEntityManager;
 
 	/**
@@ -48,7 +47,6 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
 				.getGenericSuperclass();
 		this.identifierClass = (Class<ID>) genericSuperClass.getActualTypeArguments()[0];
 		this.persistenceClass = (Class<T>) genericSuperClass.getActualTypeArguments()[1];
-		this.entityManagerFactory = PersistenceHelper.getEntityManagerFactorySingletonInstance();
 		this.threadLocalEntityManager = new ThreadLocal<>();
 
 		// Add JVM shutdown hook to close resource and avoid memory leaks.
@@ -92,10 +90,7 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
 	}
 
   private final void closeEntityManagerFactory() {
-    EntityManagerFactory entityManagerFactory = getEntityManagerFactory();
-    if (entityManagerFactory != null && entityManagerFactory.isOpen()) {
-      entityManagerFactory.close();
-    }
+		PersistenceHelper.closeEntityManagerFactorySingletonInstance();
   }
 
   private void close() {
@@ -127,7 +122,7 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
 	@Override
 	public final EntityManager getEntityManager() {
 		EntityManager entityManager = threadLocalEntityManager.get();
-		if (null == entityManager) {
+		if (null == entityManager || !entityManager.isOpen()) {
 			entityManager = getEntityManagerFactory().createEntityManager();
 			threadLocalEntityManager.set(entityManager);
 		}
@@ -139,7 +134,7 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
 	 */
 	@Override
 	public EntityManagerFactory getEntityManagerFactory() {
-		return entityManagerFactory;
+		return PersistenceHelper.getInstance().getEntityManagerFactory();
 	}
 
 	/**
@@ -179,7 +174,9 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
 		} catch (Exception e) {
 			rollbackTransaction();
 			throw e;
-		}
+		}/* finally {
+			closeEntityManager();
+		}*/
 	}
 
 	/**
@@ -217,7 +214,9 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
     } catch (Exception e) {
       rollbackTransaction();
       throw e;
-    }
+		}/* finally {
+			closeEntityManager();
+		}*/
   }
 
 	/**
@@ -303,7 +302,9 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
 		} catch (Exception e) {
 			rollbackTransaction();
 			throw e;
-		}
+		}/* finally {
+			closeEntityManager();
+		}*/
 	}
 
 	/**
@@ -425,6 +426,14 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
 	 * {@inheritDoc}
 	 */
 	@Override
+	public List<T> findByQuery(String query, Object... params) {
+		return findByQuery(false, query, params);
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
 	public List<T> findByQuery(boolean cacheable, String query, Object... params) {
 		return findByQuery(cacheable, -1,  -1, query, params);
 	}
@@ -450,13 +459,31 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
 	 * {@inheritDoc}
 	 */
 	@Override
+	public List<T> findByQueryAndNamedParams(String query, Map<String, ?> params) {
+		return findByQueryAndNamedParams(false, query, params);
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
 	public List<T> findByQueryAndNamedParams(boolean cacheable, String query, Map<String, ?> params) {
+		return findByQueryAndNamedParams(cacheable, -1, -1, query, params);
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public List<T> findByQueryAndNamedParams(boolean cacheable, int firstResult, int maxResults, String query, Map<String, ?> params) {
 		EntityManager entityManager = getEntityManager();
 		TypedQuery<T> typedQuery = entityManager.createQuery(query, persistenceClass);
 		if (params != null) {
 			params.forEach(typedQuery::setParameter);
 		}
-		return typedQuery.setHint(QueryHints.HINT_CACHEABLE, cacheable).getResultList();
+		return queryRange(typedQuery, firstResult, maxResults)
+				.setHint(QueryHints.HINT_CACHEABLE, cacheable)
+				.getResultList();
 	}
 
 	public TypedQuery<T> queryRange(TypedQuery<T> query, int firstResult, int maxResults) {

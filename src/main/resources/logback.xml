@@ -1,23 +1,41 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<configuration>
+<configuration scan="true" scanPeriod="30 seconds" debug="false">
 
   <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <!--
+      Note:
+        On Windows machines setting withJansi to true enables ANSI color code interpretation by the
+        Jansi library. This requires org.fusesource.jansi:jansi:1.8 on the class path. Note that
+        Unix-based operating systems such as Linux and Mac OS X support ANSI color codes by default.
+      Coloring:
+        Grouping by parentheses as explained above allows coloring of sub-patterns. As of version
+        1.0.5, PatternLayout recognizes "%black", "%red", "%green","%yellow","%blue", "%magenta",
+        "%cyan", "%white", "%gray", "%boldRed","%boldGreen", "%boldYellow", "%boldBlue",
+        "%boldMagenta""%boldCyan", "%boldWhite" and "%highlight" as conversion words. These
+        conversion words are intended to contain a sub-pattern. Any sub-pattern enclosed by a
+        coloring word will be output in the specified color. Below is a configuration file
+        illustrating coloring. Note the %cyan conversion specifier enclosing "%logger{15}".
+        This will output the logger name abbreviated to 15 characters in cyan.
+        The %highlight conversion specifier prints its sub-pattern in bold-red for events of level
+        ERROR, in red for WARN, in BLUE for INFO, and in the default color for other levels.
+    -->
+    <withJansi>true</withJansi>
     <encoder>
-      <charset>UTF-8</charset>
-      <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{0} - %msg%n</pattern>
+<!--      <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{0} - %msg%n%rEx</pattern>-->
+      <pattern>%d [%thread] %highlight(%-5level) %cyan(%logger{80}) - %msg%n%rEx</pattern>
     </encoder>
   </appender>
 
-  <logger name="br.com.thiaguten" level="DEBUG"/>
-  <logger name="org.hsqldb" level="INFO"/>
-  <logger name="com.zaxxer" level="DEBUG"/>
-  <logger name="org.hibernate" level="INFO"/>
-  <logger name="org.hibernate.jpa" level="DEBUG"/>
-  <logger name="org.hibernate.cache" level="DEBUG"/>
-  <!--<logger name="org.hibernate.type" level="TRACE" />-->
-  <logger name="org.hibernate.engine.jdbc.batch.internal.BatchingBatch" level="DEBUG" />
+  <logger name="br.com.thiaguten" level="debug"/>
+  <logger name="com.zaxxer" level="debug"/>
+  <logger name="net.ttddyy" level="debug"/>
+  <logger name="org.hibernate.jpa" level="debug"/>
+  <!--<logger name="org.hibernate.cache" level="debug"/>-->
+  <!--<logger name="org.hibernate.SQL" level="debug"/>-->
+  <!--<logger name="org.hibernate.type" level="trace" />-->
+  <!--<logger name="org.hibernate.engine.jdbc.batch.internal.BatchingBatch" level="debug" />-->
 
-  <root level="INFO">
+  <root level="info">
     <appender-ref ref="STDOUT"/>
   </root>
 
