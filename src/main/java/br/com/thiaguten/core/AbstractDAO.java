@@ -22,6 +22,8 @@ import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Projections;
 import org.hibernate.jpa.QueryHints;
 import org.hibernate.transform.ResultTransformer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Abstract generic DAO class that makes delegation calls features implemented
@@ -33,6 +35,8 @@ import org.hibernate.transform.ResultTransformer;
  * @author Thiago Gutenberg Carvalho da Costa
  */
 public abstract class AbstractDAO<ID extends Serializable, T extends Persistable<ID>> implements IDAO<ID, T> {
+
+	protected final Logger logger = LoggerFactory.getLogger(getClass());
 
 	private final Class<T> persistenceClass;
 	private final Class<ID> identifierClass;
@@ -48,9 +52,6 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
 		this.identifierClass = (Class<ID>) genericSuperClass.getActualTypeArguments()[0];
 		this.persistenceClass = (Class<T>) genericSuperClass.getActualTypeArguments()[1];
 		this.threadLocalEntityManager = new ThreadLocal<>();
-
-		// Add JVM shutdown hook to close resource and avoid memory leaks.
-		Runtime.getRuntime().addShutdownHook(new Thread(this::close));
 	}
 	
 	// methods for transactional control
@@ -81,29 +82,21 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
 		}
 	}
 
-	public final void closeEntityManager() {
-		EntityManager entityManager = getEntityManager();
+	public void closeEntityManager() {
+		EntityManager entityManager = threadLocalEntityManager.get();
 		if (entityManager != null && entityManager.isOpen()) {
+			logger.debug("Closing entity manager instance");
 			entityManager.close();
 			threadLocalEntityManager.set(null);
 		}
 	}
-
-  private final void closeEntityManagerFactory() {
-		PersistenceHelper.closeEntityManagerFactorySingletonInstance();
-  }
-
-  private void close() {
-    closeEntityManager();
-    closeEntityManagerFactory();
-  }
 
 	/**
 	 * Get session factory.
 	 * 
 	 * @return session factory instance
 	 */
-	public final SessionFactory getSessionFactory() {
+	public SessionFactory getSessionFactory() {
 		return getEntityManagerFactory().unwrap(SessionFactory.class);
 	}
 
@@ -112,7 +105,7 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
 	 *
 	 * @return session instance
 	 */
-	public final Session getSession() {
+	public Session getSession() {
 		return getEntityManager().unwrap(Session.class);
 	}
 
@@ -123,6 +116,7 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
 	public final EntityManager getEntityManager() {
 		EntityManager entityManager = threadLocalEntityManager.get();
 		if (null == entityManager || !entityManager.isOpen()) {
+			logger.debug("Creating entity manager instance");
 			entityManager = getEntityManagerFactory().createEntityManager();
 			threadLocalEntityManager.set(entityManager);
 		}
@@ -153,6 +147,18 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
 		return identifierClass;
 	}
 
+	private T saveOrUpdateBehavior(EntityManager entityManager, T entity) {
+		ID id = entity.getId();
+		if (id != null) {
+			// creates a new managed instance by coping the state from the passed entity
+			entity = entityManager.merge(entity);
+		} else {
+			// makes that passed entity instance managed
+			entityManager.persist(entity);
+		}
+		return entity;
+	}
+
 	/**
 	 * {@inheritDoc}
 	 */
@@ -161,14 +167,7 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
 		EntityManager entityManager = getEntityManager();
 		try {
 			beginTransaction();
-
-			ID id = entity.getId();
-			if (id != null) {
-				entity = entityManager.merge(entity);
-			} else {
-				entityManager.persist(entity);
-			}
-
+			entity = saveOrUpdateBehavior(entityManager, entity);
 			commitTransaction();
 			return entity;
 		} catch (Exception e) {
@@ -189,7 +188,7 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
       beginTransaction();
 
       int entityCount = entities.size();
-      List<T> detachedEntities = new ArrayList<>(entityCount);
+      List<T> entityList = new ArrayList<>(entityCount);
 
       for (int i = 0; i < entityCount; i++) {
         if (i > 0 && i % batchSize == 0) {
@@ -198,19 +197,12 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
           entityManager.clear();
         }
 
-        T entity = entities.get(i);
-        ID id = entity.getId();
-        if (id != null) {
-          entity = entityManager.merge(entity);
-        } else {
-          entityManager.persist(entity);
-        }
-
-				detachedEntities.add(entity);
+        T entity = saveOrUpdateBehavior(entityManager, entities.get(i));
+				entityList.add(entity);
       }
 
       commitTransaction();
-      return detachedEntities;
+      return entityList;
     } catch (Exception e) {
       rollbackTransaction();
       throw e;
@@ -263,7 +255,7 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
 	 */
 	@Override
 	public void delete(T entity) {
-		deleteByEntityOrId(persistenceClass, entity, null);
+		deleteById(entity.getId());
 	}
 
 	/**
@@ -271,33 +263,15 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
 	 */
 	@Override
 	public void deleteById(ID id) {
-		deleteByEntityOrId(persistenceClass, null, id);
-	}
+		if (null == id) {
+			throw new PersistenceException("Could not delete. ID is null.");
+		}
 
-	/**
-	 * Delete an entity by its identifier.
-	 *
-	 * @param entityClazz the entity class
-	 * @param entity      the type of the entity
-	 * @param id          the entity identifier
-	 */
-	public void deleteByEntityOrId(final Class<T> entityClazz, final T entity, final ID id) {
 		EntityManager entityManager = getEntityManager();
 		try {
 			beginTransaction();
-
-			if (null == id && (null == entity || null == entity.getId())) {
-				throw new PersistenceException("Could not delete. ID is null.");
-			}
-
-			ID _id = id;
-			if (null == _id) {
-				_id = entity.getId();
-			}
-
-			T t = entityManager.getReference(entityClazz, _id);
-			entityManager.remove(t);
-
+			T entity = entityManager.getReference(persistenceClass, id);
+			entityManager.remove(entity);
 			commitTransaction();
 		} catch (Exception e) {
 			rollbackTransaction();

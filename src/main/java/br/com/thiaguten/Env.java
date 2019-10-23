@@ -20,11 +20,14 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import net.ttddyy.dsproxy.listener.logging.DefaultQueryLogEntryCreator;
+import net.ttddyy.dsproxy.listener.logging.SLF4JLogLevel;
 import net.ttddyy.dsproxy.listener.logging.SLF4JQueryLoggingListener;
 import net.ttddyy.dsproxy.support.ProxyDataSource;
 import net.ttddyy.dsproxy.support.ProxyDataSourceBuilder;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.Ignition;
 import org.hibernate.engine.jdbc.internal.FormatStyle;
 import org.hibernate.engine.jdbc.internal.Formatter;
 import org.hsqldb.jdbc.JDBCDataSource;
@@ -34,10 +37,28 @@ public class Env {
   public static final String url = "jdbc:hsqldb:mem:test;shutdown=true";
   public static final String user = "sa";
   public static final String password = "";
-  public static final int batchSize = 10; //Integer.parseInt(Dialect.DEFAULT_BATCH_SIZE);
+  public static final int batchSize = 50; //Integer.parseInt(Dialect.DEFAULT_BATCH_SIZE);
 
   public enum ConnectionStrategy {
     DATA_SOURCE, CONNECTION_PROVIDER
+  }
+
+  public static String crudInfo(AtomicInteger counter) {
+    return "[CRUD running id: " + counter.incrementAndGet() + " - Thread current id: " + Thread.currentThread().getId() + "]";
+  }
+
+  public static void initHSQLDatabaseGUIManager() {
+    org.hsqldb.util.DatabaseManagerSwing.main(new String[]{
+        "-url", Env.url, "-user", Env.user, "-password", Env.password
+    });
+  }
+
+  public static Ignite startIgnite() {
+//    System.setProperty(org.apache.ignite.IgniteSystemProperties.IGNITE_QUIET, "false");
+    System.setProperty("java.net.preferIPv4Stack", "true");
+    Ignite ignite = Ignition.start("hibernate-l2-grid.xml");
+    Runtime.getRuntime().addShutdownHook(new Thread(ignite::close));
+    return ignite;
   }
 
   public static Map<String, Object> createPersistenceConfig(Ignite ignite, ConnectionStrategy connectionStrategy) {
@@ -112,6 +133,7 @@ public class Env {
 
     SLF4JQueryLoggingListener slf4JQueryLoggingListener = new SLF4JQueryLoggingListener();
     slf4JQueryLoggingListener.setQueryLogEntryCreator(prettyQueryLogEntryCreator);
+    slf4JQueryLoggingListener.setLogLevel(SLF4JLogLevel.INFO);
 
     ProxyDataSource proxyDataSource = ProxyDataSourceBuilder
         .create(hikariDataSource())

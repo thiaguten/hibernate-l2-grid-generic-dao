@@ -6,6 +6,13 @@
 
   <bean id="ignite.cfg" class="org.apache.ignite.configuration.IgniteConfiguration">
     <!--
+      Specify the logger implementation of the caching grid.
+    -->
+    <property name="gridLogger">
+      <bean class="org.apache.ignite.logger.slf4j.Slf4jLogger"/>
+    </property>
+
+    <!--
         Specify the name of the caching grid (should correspond to the
         one in Hibernate configuration).
     -->
