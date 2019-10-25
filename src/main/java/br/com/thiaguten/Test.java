@@ -17,26 +17,50 @@ import org.apache.ignite.Ignite;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class BatchTest {
+public class Test {
 
-  private static final Logger logger = LoggerFactory.getLogger(BatchTest.class);
+  private static final Logger logger = LoggerFactory.getLogger(Test.class);
 
   public static void main(String[] args) {
-    logger.info("Start Ignite");
     Ignite ignite = Env.startIgnite();
-
-    logger.info("Init JPA bootstrap process");
-    Map<String, Object> props = Env.createPersistenceConfig(ignite, ConnectionStrategy.DATA_SOURCE);
+    Map<String, Object> props = Env.createPersistenceConfig(ignite, ConnectionStrategy.CONNECTION_PROVIDER);
     PersistenceHelper.bootstrap(new PersistenceUnitInfoImpl("testUnit"), props);
-
     PostDAO postDAO = new PostDAOImpl();
     PostIDSupplier postIdSupplier = new PostIDSupplier(ignite, postDAO);
-
     AtomicInteger counter = new AtomicInteger();
 
-    batchCRUD(counter, postDAO, postIdSupplier);
+    simpleCRUD(counter, postDAO, postIdSupplier);
+//    batchCRUD(counter, postDAO, postIdSupplier);
 
 //    Env.initHSQLDatabaseGUIManager();
+  }
+
+  public static void simpleCRUD(AtomicInteger counter, PostDAO postDAO, PostIDSupplier postIdSupplier) {
+    String crudInfo = Env.crudInfo(counter);
+
+    logger.debug(">>> CREATING - " + crudInfo);
+    Post post = new Post("insertTest", new PostDetails("Thiago"));
+    post.setId(postIdSupplier.getNextIdAsLong());
+    Post postSaved = postDAO.save(post);
+    logger.debug(">>> CREATED - " + crudInfo + " - {}", postSaved);
+
+    logger.debug(">>> UPDATING - " + crudInfo);
+    postSaved.setTitle("updateTest");
+    postSaved.addPostComment(new PostComment("Nice post!"));
+    Post postUpdated = postDAO.update(postSaved);
+    logger.debug(">>> UPDATED - " + crudInfo + " - {}", postUpdated);
+
+    logger.debug(">>> READING - " + crudInfo);
+    Post postFound = postDAO.findById(postUpdated.getId());
+    logger.debug(">>> READ - " + crudInfo + " - {}", postFound);
+
+    logger.debug(">>> SEARCHING - " + crudInfo);
+    List<Post> postFounds = postDAO.findByTitle("test");
+    logger.debug(">>> FOUND - " + crudInfo + " - {}", postFounds);
+
+    logger.debug(">>> DELETING - " + crudInfo);
+    postDAO.delete(postFound);
+    logger.debug(">>> DELETED - " + crudInfo);
   }
 
   public static void batchCRUD(AtomicInteger counter, PostDAO postDAO, PostIDSupplier postIdSupplier) {

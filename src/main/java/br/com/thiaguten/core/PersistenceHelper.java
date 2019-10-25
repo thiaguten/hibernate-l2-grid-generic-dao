@@ -4,14 +4,21 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
+import javax.persistence.EntityTransaction;
 import javax.persistence.Persistence;
 import javax.persistence.PersistenceException;
 import javax.persistence.spi.PersistenceProvider;
 import javax.persistence.spi.PersistenceProviderResolverHolder;
 import javax.persistence.spi.PersistenceUnitInfo;
 
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
 import org.hibernate.jpa.boot.spi.Bootstrap;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Helper class to initialize JPA bootstrap process and manage resources.
@@ -20,15 +27,21 @@ import org.hibernate.jpa.boot.spi.Bootstrap;
  */
 public final class PersistenceHelper {
 
+	private static final Logger logger = LoggerFactory.getLogger(PersistenceHelper.class);
+
 	static {
 		PersistenceProviderResolverHolder.setPersistenceProviderResolver(PersistenceProviderResolverImpl.getInstance());
 	}
 
 	private EntityManagerFactory entityManagerFactory;
 	private AtomicBoolean initialized = new AtomicBoolean(false);
+	private ThreadLocal<EntityManager> threadLocalEntityManager = new ThreadLocal<>();
 
 	private PersistenceHelper() {
 		// singleton
+
+		// Add JVM shutdown hook to close resource and avoid memory leaks.
+		Runtime.getRuntime().addShutdownHook(new Thread(this::close));
 	}
 
 	/**
@@ -49,17 +62,76 @@ public final class PersistenceHelper {
 		return LazySingletonHolder.INSTANCE;
 	}
 
+	public EntityManager createEntityManager() {
+		logger.debug("Creating entity manager instance");
+		return getEntityManagerFactory().createEntityManager();
+	}
+
+	/**
+	 * Get entity manager.
+	 *
+	 * @return entity manager instance
+	 */
+	public EntityManager getEntityManager() {
+		EntityManager entityManager = threadLocalEntityManager.get();
+		if (null == entityManager || !entityManager.isOpen()) {
+			entityManager = createEntityManager();
+			threadLocalEntityManager.set(entityManager);
+		}
+		return entityManager;
+	}
+
 	/**
 	 * Get entity manager factory.
 	 * 
 	 * @return entity manager factory instance
 	 */
 	public EntityManagerFactory getEntityManagerFactory() {
-		if (entityManagerFactory != null && entityManagerFactory.isOpen()) {
-			return entityManagerFactory;
+		if (null == entityManagerFactory || !entityManagerFactory.isOpen()) {
+			throw new PersistenceException(
+					"EntityManagerFactory instance is null or closed, invoke initialize method to create a new one");
 		}
-		throw new PersistenceException(
-				"EntityManagerFactory instance is null or closed, invoke initialize method to create a new one");
+		return entityManagerFactory;
+	}
+
+	/**
+	 * Get session.
+	 *
+	 * @return session instance
+	 */
+	public Session getSession() {
+		return getEntityManager().unwrap(Session.class);
+	}
+
+	/**
+	 * Get SessionFactory.
+	 *
+	 * @return session factory instance
+	 */
+	public SessionFactory getSessionFactory() {
+		return getEntityManagerFactory().unwrap(SessionFactory.class);
+	}
+
+	/**
+	 * Close an application-managed entity manager.
+	 */
+	public void closeEntityManager() {
+		EntityManager entityManager = threadLocalEntityManager.get();
+		if (entityManager != null && entityManager.isOpen()) {
+			logger.debug("Closing entity manager instance");
+			entityManager.close();
+			threadLocalEntityManager.set(null);
+		}
+	}
+
+	/**
+	 * Close the factory, releasing any resources that it holds.
+	 */
+	public void closeEntityManagerFactory() {
+		if (entityManagerFactory != null && entityManagerFactory.isOpen()) {
+			logger.debug("Closing entity manager factory instance");
+			entityManagerFactory.close();
+		}
 	}
 
 	/**
@@ -67,9 +139,8 @@ public final class PersistenceHelper {
 	 * releasing any resources that it holds.
 	 */
 	public void close() {
-		if (entityManagerFactory != null && entityManagerFactory.isOpen()) {
-			entityManagerFactory.close();
-		}
+		closeEntityManager();
+		closeEntityManagerFactory();
 	}
 
 	/**
@@ -83,8 +154,12 @@ public final class PersistenceHelper {
 	 * @param props persistence unit properties
 	 */
 	public void initialize(String name, Map<String, Object> props) {
+		logger.info("Init JPA bootstrap process");
 		if (initialized.compareAndSet(false, true)) {
+			logger.debug("Creating entity manager factory instance");
 			entityManagerFactory = Persistence.createEntityManagerFactory(name, props);
+			threadLocalEntityManager.set(createEntityManager());
+//			threadLocalEntityManager = ThreadLocal.withInitial(this::createEntityManager);
 		}
 	}
 
@@ -99,21 +174,19 @@ public final class PersistenceHelper {
 	 * @param props persistence unit properties
 	 */
 	public void initialize(PersistenceUnitInfo info, Map<String, Object> props) {
+		logger.info("Init JPA bootstrap process");
 		if (initialized.compareAndSet(false, true)) {
+			logger.debug("Creating entity manager factory instance");
 			ClassLoader classLoader = this.getClass().getClassLoader();
-
-			/*
-				Using a local static method because class Persistence does not have a static
-				method that takes as a parameter an instance of the PersistenceUnitInfo interface
-			 */
 //			entityManagerFactory = PersistenceHelper.createEntityManagerFactory(info, props);
-
 			/*
 				Using the Hibernate initialization class directly, because I can mainly pass a
 				PersistenceUnitInfo and also a Classloader as a parameter, different from the
 				Persistence class of the JPA specification.
 			 */
 			entityManagerFactory = Bootstrap.getEntityManagerFactoryBuilder(info, props, classLoader).build();
+			threadLocalEntityManager.set(createEntityManager());
+//			threadLocalEntityManager = ThreadLocal.withInitial(this::createEntityManager);
 		}
 	}
 
@@ -121,15 +194,15 @@ public final class PersistenceHelper {
 	 * Create EntityManagerFactory of the first loaded
 	 * <code>PersistenceProvider</code> Service Provider Implementations - SPI
 	 * available in the runtime environment.
-	 * 
-	 * @param info  persistence unit info
+	 *
+	 * This method was created because the javax.persistence.Persistence class does not have a static
+	 * method that takes as a parameter an instance of the PersistenceUnitInfo interface.
+	 *
+	 * @param info persistence unit info
 	 * @param props persistence unit properties
 	 * @return entity manager factory instance
 	 */
-	@SuppressWarnings("unused")
-	private static EntityManagerFactory createEntityManagerFactory(
-			PersistenceUnitInfo info, Map<String, Object> props) {
-
+	private static EntityManagerFactory createEntityManagerFactory(PersistenceUnitInfo info, Map<String, Object> props) {
 		EntityManagerFactory emf = null;
 		List<PersistenceProvider> providers = PersistenceProviderResolverHolder
 				.getPersistenceProviderResolver()
@@ -160,11 +233,54 @@ public final class PersistenceHelper {
 		PersistenceHelper.getInstance().initialize(info, props);
 	}
 
-	public static EntityManagerFactory getEntityManagerFactorySingletonInstance() {
+	public static EntityManagerFactory getEntityManagerFactoryInstance() {
+		// singleton instance
 		return PersistenceHelper.getInstance().getEntityManagerFactory();
 	}
 
-	public static void closeEntityManagerFactorySingletonInstance() {
-		PersistenceHelper.getInstance().close();
+	public static EntityManager getEntityManagerInstance() {
+		// thread-safe instance
+		return PersistenceHelper.getInstance().getEntityManager();
 	}
+
+	public static SessionFactory getSessionFactoryInstance() {
+		return PersistenceHelper.getInstance().getSessionFactory();
+	}
+
+	public static Session getSessionInstance() {
+		return PersistenceHelper.getInstance().getSession();
+	}
+
+	public static void closeEntityManagerInstance() {
+		PersistenceHelper.getInstance().closeEntityManager();
+	}
+
+	// methods for transactional control
+
+	public static EntityTransaction getTransaction() {
+		return getEntityManagerInstance().getTransaction();
+	}
+
+	public static boolean isTransactionActive() {
+		return getTransaction().isActive();
+	}
+
+	public static void beginTransaction() {
+		if (!isTransactionActive()) {
+			getTransaction().begin();
+		}
+	}
+
+	public static void commitTransaction() {
+		if (isTransactionActive()) {
+			getTransaction().commit();
+		}
+	}
+
+	public static void rollbackTransaction() {
+		if (isTransactionActive()) {
+			getTransaction().rollback();
+		}
+	}
+
 }

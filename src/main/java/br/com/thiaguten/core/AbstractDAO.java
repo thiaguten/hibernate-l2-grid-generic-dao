@@ -22,8 +22,6 @@ import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Projections;
 import org.hibernate.jpa.QueryHints;
 import org.hibernate.transform.ResultTransformer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Abstract generic DAO class that makes delegation calls features implemented
@@ -31,16 +29,13 @@ import org.slf4j.LoggerFactory;
  *
  * @param <T>  the type of the persistent class
  * @param <ID> the type of the identifier
- * 
+ *
  * @author Thiago Gutenberg Carvalho da Costa
  */
 public abstract class AbstractDAO<ID extends Serializable, T extends Persistable<ID>> implements IDAO<ID, T> {
 
-	protected final Logger logger = LoggerFactory.getLogger(getClass());
-
 	private final Class<T> persistenceClass;
 	private final Class<ID> identifierClass;
-	private final ThreadLocal<EntityManager> threadLocalEntityManager;
 
 	/**
 	 * Construct a AbstractDAO.
@@ -51,53 +46,41 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
 				.getGenericSuperclass();
 		this.identifierClass = (Class<ID>) genericSuperClass.getActualTypeArguments()[0];
 		this.persistenceClass = (Class<T>) genericSuperClass.getActualTypeArguments()[1];
-		this.threadLocalEntityManager = new ThreadLocal<>();
 	}
-	
+
 	// methods for transactional control
 
 	public EntityTransaction getTransaction() {
-		return getEntityManager().getTransaction();
+		return PersistenceHelper.getTransaction();
 	}
 
 	public boolean isTransactionActive() {
-		return getTransaction().isActive();
+		return PersistenceHelper.isTransactionActive();
 	}
 
 	public void beginTransaction() {
-		if (!isTransactionActive()) {
-			getTransaction().begin();
-		}
+		PersistenceHelper.beginTransaction();
 	}
 
 	public void commitTransaction() {
-		if (isTransactionActive()) {
-			getTransaction().commit();
-		}
+		PersistenceHelper.commitTransaction();
 	}
 
 	public void rollbackTransaction() {
-		if (isTransactionActive()) {
-			getTransaction().rollback();
-		}
+		PersistenceHelper.rollbackTransaction();
 	}
 
 	public void closeEntityManager() {
-		EntityManager entityManager = threadLocalEntityManager.get();
-		if (entityManager != null && entityManager.isOpen()) {
-			logger.debug("Closing entity manager instance");
-			entityManager.close();
-			threadLocalEntityManager.set(null);
-		}
+		PersistenceHelper.closeEntityManagerInstance();
 	}
 
 	/**
 	 * Get session factory.
-	 * 
+	 *
 	 * @return session factory instance
 	 */
 	public SessionFactory getSessionFactory() {
-		return getEntityManagerFactory().unwrap(SessionFactory.class);
+		return PersistenceHelper.getSessionFactoryInstance();
 	}
 
 	/**
@@ -106,21 +89,15 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
 	 * @return session instance
 	 */
 	public Session getSession() {
-		return getEntityManager().unwrap(Session.class);
+		return PersistenceHelper.getSessionInstance();
 	}
 
 	/**
 	 * {@inheritDoc}
 	 */
 	@Override
-	public final EntityManager getEntityManager() {
-		EntityManager entityManager = threadLocalEntityManager.get();
-		if (null == entityManager || !entityManager.isOpen()) {
-			logger.debug("Creating entity manager instance");
-			entityManager = getEntityManagerFactory().createEntityManager();
-			threadLocalEntityManager.set(entityManager);
-		}
-		return entityManager;
+	public EntityManager getEntityManager() {
+		return PersistenceHelper.getEntityManagerInstance();
 	}
 
 	/**
@@ -128,7 +105,7 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
 	 */
 	@Override
 	public EntityManagerFactory getEntityManagerFactory() {
-		return PersistenceHelper.getInstance().getEntityManagerFactory();
+		return PersistenceHelper.getEntityManagerFactoryInstance();
 	}
 
 	/**
@@ -233,7 +210,7 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
 //		hints.put(QueryHints.HINT_CACHEABLE, cacheable);
 //		return entityManager.find(persistenceClass, id, hints);
 //	}
-	
+
 	/**
 	 * {@inheritDoc}
 	 */

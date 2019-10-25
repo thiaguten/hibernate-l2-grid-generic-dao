@@ -9,6 +9,7 @@ import br.com.thiaguten.sequence.PostIDSupplier;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -21,6 +22,13 @@ public class MultiThreadTest {
   private static final Logger logger = LoggerFactory.getLogger(MultiThreadTest.class);
 
   public static void main(String[] args) {
+    Ignite ignite = Env.startIgnite();
+    Map<String, Object> props = Env.createPersistenceConfig(ignite, ConnectionStrategy.CONNECTION_PROVIDER);
+    PersistenceHelper.bootstrap(new PersistenceUnitInfoImpl("testUnit"), props);
+    PostDAO postDAO = new PostDAOImpl();
+    PostIDSupplier postIdSupplier = new PostIDSupplier(ignite, postDAO);
+    AtomicInteger counter = new AtomicInteger();
+
     Thread.setDefaultUncaughtExceptionHandler((thread, throwable) -> {
       logger.error("An exception has been captured!");
       logger.error("Thread: {}", thread.getId());
@@ -29,44 +37,26 @@ public class MultiThreadTest {
       logger.error("Stack Trace:", throwable);
     });
 
-    ExecutorService executorService = Executors.newCachedThreadPool();
-    Runtime.getRuntime().addShutdownHook(new Thread(executorService::shutdown));
+    int limit = 50;
 
-    logger.info("Start Ignite");
-    Ignite ignite = Env.startIgnite();
-
-    logger.info("Init JPA bootstrap process");
-    Map<String, Object> props = Env.createPersistenceConfig(ignite, ConnectionStrategy.CONNECTION_PROVIDER);
-    PersistenceHelper.bootstrap(new PersistenceUnitInfoImpl("testUnit"), props);
-
-    PostDAO postDAO = new PostDAOImpl();
-    PostIDSupplier postIdSupplier = new PostIDSupplier(ignite, postDAO);
-    AtomicInteger counter = new AtomicInteger();
-
-//    Runnable task = createCRUDTask(postDAO, postIdSupplier);
-//    executorService.execute(task);
-//    executorService.execute(task);
-//    executorService.execute(task);
-//    executorService.execute(task);
-
-    // perform crud operations pretty much simultaneously (concurrently)
-    int entityCount = 10;
-    Supplier<Runnable> taskSupplier = () -> createCRUDTask(counter, postDAO, postIdSupplier);
-    Stream.generate(taskSupplier).limit(entityCount).forEach(executorService::execute);
-
-//    Env.initHSQLDatabaseGUIManager();
-  }
-
-  private static Runnable createCRUDTask(AtomicInteger counter, PostDAO postDAO, PostIDSupplier postIdSupplier) {
-    return () -> {
+    Supplier<Runnable> taskSupplier = () -> () -> {
       try {
-        Thread.sleep(500);
-//        SimpleTest.simpleCRUD(counter, postDAO, postIdSupplier);
-        BatchTest.batchCRUD(counter, postDAO, postIdSupplier);
+//        TimeUnit.MILLISECONDS.sleep(500);
+        Test.simpleCRUD(counter, postDAO, postIdSupplier);
+//        Test.batchCRUD(counter, postDAO, postIdSupplier);
       } catch (Exception e) {
         throw new RuntimeException(e);
       }
     };
+    Supplier<Thread> threadSupplier = () -> new Thread(taskSupplier.get());
+
+    Stream.generate(threadSupplier).limit(limit).parallel().forEach(Thread::start);
+
+//    ExecutorService executorService = Executors.newCachedThreadPool();
+//    Runtime.getRuntime().addShutdownHook(new Thread(executorService::shutdown));
+//    Stream.generate(taskSupplier).limit(limit).forEach(executorService::execute);
+
+    Env.initHSQLDatabaseGUIManager();
   }
 
 }
