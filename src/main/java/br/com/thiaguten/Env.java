@@ -54,7 +54,7 @@ public class Env {
   }
 
   public static Ignite startIgnite() {
-//    System.setProperty(org.apache.ignite.IgniteSystemProperties.IGNITE_QUIET, "false");
+    System.setProperty(org.apache.ignite.IgniteSystemProperties.IGNITE_QUIET, "true");
     System.setProperty("java.net.preferIPv4Stack", "true");
     Ignite ignite = Ignition.start("hibernate-l2-grid.xml");
     Runtime.getRuntime().addShutdownHook(new Thread(ignite::close));

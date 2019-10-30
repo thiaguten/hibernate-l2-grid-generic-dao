@@ -56,7 +56,7 @@ public class MultiThreadTest {
 //    Runtime.getRuntime().addShutdownHook(new Thread(executorService::shutdown));
 //    Stream.generate(taskSupplier).limit(limit).forEach(executorService::execute);
 
-    Env.initHSQLDatabaseGUIManager();
+//    Env.initHSQLDatabaseGUIManager();
   }
 
 }

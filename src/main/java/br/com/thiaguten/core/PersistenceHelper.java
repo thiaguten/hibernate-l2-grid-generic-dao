@@ -22,7 +22,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Helper class to initialize JPA bootstrap process and manage resources.
- * 
+ *
  * @author Thiago Gutenberg Carvalho da Costa
  */
 public final class PersistenceHelper {
@@ -35,7 +35,7 @@ public final class PersistenceHelper {
 
 	private EntityManagerFactory entityManagerFactory;
 	private AtomicBoolean initialized = new AtomicBoolean(false);
-	private ThreadLocal<EntityManager> threadLocalEntityManager = new ThreadLocal<>();
+	private ThreadLocal<EntityManager> entityManagerHolder = new ThreadLocal<>();
 
 	private PersistenceHelper() {
 		// singleton
@@ -46,7 +46,7 @@ public final class PersistenceHelper {
 
 	/**
 	 * Initialization-on-demand holder idiom implementation.
-	 * 
+	 *
 	 * @author Thiago Gutenberg Carvalho da Costa
 	 */
 	private static class LazySingletonHolder {
@@ -55,7 +55,7 @@ public final class PersistenceHelper {
 
 	/**
 	 * Get PersistenceHelper instance.
-	 * 
+	 *
 	 * @return persistence helper singleton instance
 	 */
 	public static PersistenceHelper getInstance() {
@@ -73,17 +73,17 @@ public final class PersistenceHelper {
 	 * @return entity manager instance
 	 */
 	public EntityManager getEntityManager() {
-		EntityManager entityManager = threadLocalEntityManager.get();
+		EntityManager entityManager = entityManagerHolder.get();
 		if (null == entityManager || !entityManager.isOpen()) {
 			entityManager = createEntityManager();
-			threadLocalEntityManager.set(entityManager);
+			entityManagerHolder.set(entityManager);
 		}
 		return entityManager;
 	}
 
 	/**
 	 * Get entity manager factory.
-	 * 
+	 *
 	 * @return entity manager factory instance
 	 */
 	public EntityManagerFactory getEntityManagerFactory() {
@@ -94,33 +94,33 @@ public final class PersistenceHelper {
 		return entityManagerFactory;
 	}
 
-	/**
-	 * Get session.
-	 *
-	 * @return session instance
-	 */
-	public Session getSession() {
-		return getEntityManager().unwrap(Session.class);
-	}
-
-	/**
-	 * Get SessionFactory.
-	 *
-	 * @return session factory instance
-	 */
-	public SessionFactory getSessionFactory() {
-		return getEntityManagerFactory().unwrap(SessionFactory.class);
-	}
+//	/**
+//	 * Get session.
+//	 *
+//	 * @return session instance
+//	 */
+//	public Session getSession() {
+//		return getEntityManager().unwrap(Session.class);
+//	}
+//
+//	/**
+//	 * Get SessionFactory.
+//	 *
+//	 * @return session factory instance
+//	 */
+//	public SessionFactory getSessionFactory() {
+//		return getEntityManagerFactory().unwrap(SessionFactory.class);
+//	}
 
 	/**
 	 * Close an application-managed entity manager.
 	 */
 	public void closeEntityManager() {
-		EntityManager entityManager = threadLocalEntityManager.get();
+		EntityManager entityManager = entityManagerHolder.get();
 		if (entityManager != null && entityManager.isOpen()) {
 			logger.debug("Closing entity manager instance");
 			entityManager.close();
-			threadLocalEntityManager.set(null);
+			entityManagerHolder.set(null);
 		}
 	}
 
@@ -146,10 +146,10 @@ public final class PersistenceHelper {
 	/**
 	 * Initialize JPA bootstrap process by creating a new EntityManagerFactory and
 	 * EntityManager instances.
-	 * 
+	 *
 	 * Through this initialization method the META-INF/persistence.xml file is
 	 * mandatory.
-	 * 
+	 *
 	 * @param name  persistence unit Name
 	 * @param props persistence unit properties
 	 */
@@ -158,18 +158,18 @@ public final class PersistenceHelper {
 		if (initialized.compareAndSet(false, true)) {
 			logger.debug("Creating entity manager factory instance");
 			entityManagerFactory = Persistence.createEntityManagerFactory(name, props);
-			threadLocalEntityManager.set(createEntityManager());
-//			threadLocalEntityManager = ThreadLocal.withInitial(this::createEntityManager);
+			entityManagerHolder.set(createEntityManager());
+//			entityManagerHolder = ThreadLocal.withInitial(this::createEntityManager);
 		}
 	}
 
 	/**
 	 * Initialize JPA bootstrap process by creating a new EntityManagerFactory and
 	 * EntityManager instances.
-	 * 
+	 *
 	 * Through this initialization method the META-INF/persistence.xml file is NOT
 	 * mandatory.
-	 * 
+	 *
 	 * @param info  persistence unit info
 	 * @param props persistence unit properties
 	 */
@@ -180,13 +180,13 @@ public final class PersistenceHelper {
 			ClassLoader classLoader = this.getClass().getClassLoader();
 //			entityManagerFactory = PersistenceHelper.createEntityManagerFactory(info, props);
 			/*
-				Using the Hibernate initialization class directly, because I can mainly pass a
-				PersistenceUnitInfo and also a Classloader as a parameter, different from the
-				Persistence class of the JPA specification.
+			 * Using the Hibernate initialization class directly, because I can mainly pass
+			 * a PersistenceUnitInfo and also a Classloader as a parameter, different from
+			 * the Persistence class of the JPA specification.
 			 */
 			entityManagerFactory = Bootstrap.getEntityManagerFactoryBuilder(info, props, classLoader).build();
-			threadLocalEntityManager.set(createEntityManager());
-//			threadLocalEntityManager = ThreadLocal.withInitial(this::createEntityManager);
+			entityManagerHolder.set(createEntityManager());
+//			entityManagerHolder = ThreadLocal.withInitial(this::createEntityManager);
 		}
 	}
 
@@ -195,13 +195,15 @@ public final class PersistenceHelper {
 	 * <code>PersistenceProvider</code> Service Provider Implementations - SPI
 	 * available in the runtime environment.
 	 *
-	 * This method was created because the javax.persistence.Persistence class does not have a static
-	 * method that takes as a parameter an instance of the PersistenceUnitInfo interface.
+	 * This method was created because the javax.persistence.Persistence class does
+	 * not have a static method that takes as a parameter an instance of the
+	 * PersistenceUnitInfo interface.
 	 *
-	 * @param info persistence unit info
+	 * @param info  persistence unit info
 	 * @param props persistence unit properties
 	 * @return entity manager factory instance
 	 */
+	@SuppressWarnings("unused")
 	private static EntityManagerFactory createEntityManagerFactory(PersistenceUnitInfo info, Map<String, Object> props) {
 		EntityManagerFactory emf = null;
 		List<PersistenceProvider> providers = PersistenceProviderResolverHolder
@@ -222,7 +224,7 @@ public final class PersistenceHelper {
 
 		return emf;
 	}
-	
+
 	// CONVENIENT UTILITY STATIC METHODS
 
 	public static void bootstrap(String name, Map<String, Object> props) {
@@ -243,44 +245,16 @@ public final class PersistenceHelper {
 		return PersistenceHelper.getInstance().getEntityManager();
 	}
 
-	public static SessionFactory getSessionFactoryInstance() {
-		return PersistenceHelper.getInstance().getSessionFactory();
-	}
-
-	public static Session getSessionInstance() {
-		return PersistenceHelper.getInstance().getSession();
-	}
+//	public static SessionFactory getSessionFactoryInstance() {
+//		return PersistenceHelper.getInstance().getSessionFactory();
+//	}
+//
+//	public static Session getSessionInstance() {
+//		return PersistenceHelper.getInstance().getSession();
+//	}
 
 	public static void closeEntityManagerInstance() {
 		PersistenceHelper.getInstance().closeEntityManager();
-	}
-
-	// methods for transactional control
-
-	public static EntityTransaction getTransaction() {
-		return getEntityManagerInstance().getTransaction();
-	}
-
-	public static boolean isTransactionActive() {
-		return getTransaction().isActive();
-	}
-
-	public static void beginTransaction() {
-		if (!isTransactionActive()) {
-			getTransaction().begin();
-		}
-	}
-
-	public static void commitTransaction() {
-		if (isTransactionActive()) {
-			getTransaction().commit();
-		}
-	}
-
-	public static void rollbackTransaction() {
-		if (isTransactionActive()) {
-			getTransaction().rollback();
-		}
 	}
 
 }

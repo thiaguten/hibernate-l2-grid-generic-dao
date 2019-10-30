@@ -11,6 +11,17 @@
   <name>hibernate-l2-grid-generic-dao</name>
   <description>Hibernate L2 Grid Cache with Apache Ignite and Generic DAO abstraction example</description>
 
+  <repositories>
+    <repository>
+      <id>gridgain</id>
+      <name>GridGain Maven repository</name>
+      <url>http://www.gridgainsystems.com/nexus/content/repositories/external</url>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </repository>
+  </repositories>
+
   <dependencies>
     <dependency>
       <groupId>org.apache.ignite</groupId>
@@ -135,7 +146,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <hibernate.version>5.1.5.Final</hibernate.version>
     <slf4j.version>1.7.25</slf4j.version>
-    <ignite.version>2.7.0</ignite.version>
+    <ignite.version>2.7.2</ignite.version>
   </properties>
 
 </project>

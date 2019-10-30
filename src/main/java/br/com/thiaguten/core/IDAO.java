@@ -120,10 +120,45 @@ public interface IDAO<ID extends Serializable, T extends Persistable<ID>> {
 	 * @param <R>         the type of the number class
 	 * @param resultClass the number class
 	 * @param query       the query string
+	 * @param params      the query positional parameters
+	 * @return the count of entities
+	 */
+	<R extends Number> R countByQuery(Class<R> resultClass, String query, Object... params);
+
+	/**
+	 * Count by query and parameters.
+	 *
+	 * @param <R>         the type of the number class
+	 * @param resultClass the number class
+	 * @param cacheable   enable query cache
+	 * @param query       the query string
+	 * @param params      the query positional parameters
+	 * @return the count of entities
+	 */
+	<R extends Number> R countByQuery(Class<R> resultClass, boolean cacheable, String query, Object... params);
+
+	/**
+	 * Count by query and parameters.
+	 *
+	 * @param <R>         the type of the number class
+	 * @param resultClass the number class
+	 * @param query       the query string
 	 * @param params      the query parameters
 	 * @return the count of entities
 	 */
 	<R extends Number> R countByQueryAndNamedParams(Class<R> resultClass, String query, Map<String, ?> params);
+
+	/**
+	 * Count by query and parameters.
+	 *
+	 * @param <R>         the type of the number class
+	 * @param resultClass the number class
+	 * @param cacheable   enable query cache
+	 * @param query       the query string
+	 * @param params      the query named parameters
+	 * @return the count of entities
+	 */
+	<R extends Number> R countByQueryAndNamedParams(Class<R> resultClass, boolean cacheable, String query, Map<String, ?> params);
 
 	/**
 	 * Load all entities.
