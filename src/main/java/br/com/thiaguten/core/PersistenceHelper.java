@@ -1,5 +1,6 @@
 package br.com.thiaguten.core;
 
+import com.zaxxer.hikari.proxy.ConnectionProxy;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -119,6 +120,15 @@ public final class PersistenceHelper {
 		EntityManager entityManager = entityManagerHolder.get();
 		if (entityManager != null && entityManager.isOpen()) {
 			logger.debug("Closing entity manager instance");
+
+			Session session = entityManager.unwrap(Session.class);
+			session.doWork(connection -> {
+				// do whatever you need to do with the connection
+				if (connection instanceof ConnectionProxy) {
+					logger.info("Closing connection proxy, releasing connection to the pool. - {}", connection);
+				}
+			});
+
 			entityManager.close();
 			entityManagerHolder.set(null);
 		}

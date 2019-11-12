@@ -39,18 +39,22 @@ public class PostDAOImpl extends AbstractDAO<Long, Post> implements PostDAO {
 
     // Criteria Query
     EntityManager entityManager = getEntityManager();
-    CriteriaBuilder cb = entityManager.getCriteriaBuilder();
-    CriteriaQuery<Post> cq = cb.createQuery(getPersistenceClass());
-    Root<Post> post = cq.from(getPersistenceClass());
-    post.fetch("postComments");
-    Join<Object, Object> postDetails = (Join<Object, Object>) post.fetch("postDetails");
-    cq.select(post).distinct(true);
+    try {
+      CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+      CriteriaQuery<Post> cq = cb.createQuery(getPersistenceClass());
+      Root<Post> post = cq.from(getPersistenceClass());
+      post.fetch("postComments");
+      Join<Object, Object> postDetails = (Join<Object, Object>) post.fetch("postDetails");
+      cq.select(post).distinct(true);
 //    cq.where(cb.like(cb.lower(post.get("title")), cb.literal(likePattern)));
-    cq.where(cb.like(cb.lower(post.get("title")), likePattern));
-    cq.orderBy(cb.asc(postDetails.get("createdOn")));
-    return entityManager.createQuery(cq)
-        .setHint(QueryHints.HINT_CACHEABLE, cacheable)
-        .getResultList();
+      cq.where(cb.like(cb.lower(post.get("title")), likePattern));
+      cq.orderBy(cb.asc(postDetails.get("createdOn")));
+      return entityManager.createQuery(cq)
+          .setHint(QueryHints.HINT_CACHEABLE, cacheable)
+          .getResultList();
+    } finally {
+      closeEntityManager();
+    }
   }
 
 }

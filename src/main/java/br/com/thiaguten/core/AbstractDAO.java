@@ -150,15 +150,17 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
         EntityManager entityManager = getEntityManager();
         try {
             beginTransaction();
+
             entity = saveOrUpdateBehavior(entityManager, entity);
+
             commitTransaction();
             return entity;
         } catch (Exception e) {
             rollbackTransaction();
             throw e;
-        }/* finally {
-			closeEntityManager();
-		}*/
+        } finally {
+			      closeEntityManager();
+		    }
     }
 
     /**
@@ -189,9 +191,9 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
         } catch (Exception e) {
             rollbackTransaction();
             throw e;
-        }/* finally {
-			closeEntityManager();
-		}*/
+        } finally {
+			      closeEntityManager();
+		    }
     }
 
     /**
@@ -200,7 +202,11 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
     @Override
     public T findById(ID id) {
         EntityManager entityManager = getEntityManager();
-        return entityManager.find(persistenceClass, id);
+        try {
+            return entityManager.find(persistenceClass, id);
+        } finally {
+            closeEntityManager();
+        }
     }
 
 //	public T findById(ID id, String graphName) {
@@ -259,9 +265,9 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
         } catch (Exception e) {
             rollbackTransaction();
             throw e;
-        }/* finally {
-			closeEntityManager();
-		}*/
+        } finally {
+			      closeEntityManager();
+		    }
     }
 
     /**
@@ -278,13 +284,17 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
     @Override
     public Long countAll(boolean cacheable) {
         EntityManager entityManager = getEntityManager();
-        CriteriaBuilder criteriaBuilder = entityManager.getCriteriaBuilder();
-        CriteriaQuery<Long> criteriaQuery = criteriaBuilder.createQuery(Long.class);
-        criteriaQuery.select(criteriaBuilder.count(criteriaQuery.from(persistenceClass)));
-        Long countResult = entityManager.createQuery(criteriaQuery)
+        try {
+            CriteriaBuilder criteriaBuilder = entityManager.getCriteriaBuilder();
+            CriteriaQuery<Long> criteriaQuery = criteriaBuilder.createQuery(Long.class);
+            criteriaQuery.select(criteriaBuilder.count(criteriaQuery.from(persistenceClass)));
+            Long countResult = entityManager.createQuery(criteriaQuery)
                 .setHint(QueryHints.HINT_CACHEABLE, cacheable)
                 .getSingleResult();
-        return null == countResult ? 0L : countResult;
+            return null == countResult ? 0L : countResult;
+        } finally {
+            closeEntityManager();
+        }
     }
 
     /**
@@ -301,13 +311,17 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
     @Override
     public <R extends Number> R countByQuery(Class<R> resultClass, boolean cacheable, String query, Object... params) {
         EntityManager entityManager = getEntityManager();
-        TypedQuery<R> typedQuery = entityManager.createQuery(query, resultClass);
-        if (params != null) {
-            for (int i = 0; i < params.length; i++) {
-                typedQuery.setParameter(i + 1, params[i]); // JPQL Positional Parameters starts from 1
+        try {
+            TypedQuery<R> typedQuery = entityManager.createQuery(query, resultClass);
+            if (params != null) {
+                for (int i = 0; i < params.length; i++) {
+                    typedQuery.setParameter(i + 1, params[i]); // JPQL Positional Parameters starts from 1
+                }
             }
+            return typedQuery.setHint(QueryHints.HINT_CACHEABLE, cacheable).getSingleResult();
+        } finally {
+            closeEntityManager();
         }
-        return typedQuery.setHint(QueryHints.HINT_CACHEABLE, cacheable).getSingleResult();
     }
 
     /**
@@ -324,11 +338,15 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
     @Override
     public <R extends Number> R countByQueryAndNamedParams(Class<R> resultClass, boolean cacheable, String query, Map<String, ?> params) {
         EntityManager entityManager = getEntityManager();
-        TypedQuery<R> typedQuery = entityManager.createQuery(query, resultClass);
-        if (params != null) {
-            params.forEach(typedQuery::setParameter);
+        try {
+            TypedQuery<R> typedQuery = entityManager.createQuery(query, resultClass);
+            if (params != null) {
+                params.forEach(typedQuery::setParameter);
+            }
+            return typedQuery.setHint(QueryHints.HINT_CACHEABLE, cacheable).getSingleResult();
+        } finally {
+            closeEntityManager();
         }
-        return typedQuery.setHint(QueryHints.HINT_CACHEABLE, cacheable).getSingleResult();
     }
 
     /**
@@ -353,11 +371,15 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
     @Override
     public List<T> findAll(boolean cacheable, int firstResult, int maxResults) {
         EntityManager entityManager = getEntityManager();
-        CriteriaQuery<T> cq = entityManager.getCriteriaBuilder().createQuery(persistenceClass);
-        TypedQuery<T> createQuery = entityManager.createQuery(cq.select(cq.from(persistenceClass)));
-        return queryRange(createQuery, firstResult, maxResults)
+        try {
+            CriteriaQuery<T> cq = entityManager.getCriteriaBuilder().createQuery(persistenceClass);
+            TypedQuery<T> createQuery = entityManager.createQuery(cq.select(cq.from(persistenceClass)));
+            return queryRange(createQuery, firstResult, maxResults)
                 .setHint(QueryHints.HINT_CACHEABLE, cacheable)
                 .getResultList();
+        } finally {
+            closeEntityManager();
+        }
     }
 
     /**
@@ -386,11 +408,15 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
             throw new PersistenceException("attributeName/attributeClass must not be null or empty");
         }
         EntityManager entityManager = getEntityManager();
-        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
-        CriteriaQuery<R> cq = cb.createQuery(attributeClass);
-        Root<T> entity = cq.from(persistenceClass);
-        cq.select((Selection<? extends R>) cb.max(entity.get(attributeName)));
-        return entityManager.createQuery(cq).getSingleResult();
+        try {
+            CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+            CriteriaQuery<R> cq = cb.createQuery(attributeClass);
+            Root<T> entity = cq.from(persistenceClass);
+            cq.select((Selection<? extends R>) cb.max(entity.get(attributeName)));
+            return entityManager.createQuery(cq).getSingleResult();
+        } finally {
+            closeEntityManager();
+        }
     }
 
     /**
@@ -432,15 +458,19 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
     @Override
     public List<T> findByQuery(boolean cacheable, int firstResult, int maxResults, String query, Object... params) {
         EntityManager entityManager = getEntityManager();
-        TypedQuery<T> typedQuery = entityManager.createQuery(query, persistenceClass);
-        if (params != null) {
-            for (int i = 0; i < params.length; i++) {
-                typedQuery.setParameter(i + 1, params[i]); // JPQL Positional Parameters starts from 1
+        try {
+            TypedQuery<T> typedQuery = entityManager.createQuery(query, persistenceClass);
+            if (params != null) {
+                for (int i = 0; i < params.length; i++) {
+                    typedQuery.setParameter(i + 1, params[i]); // JPQL Positional Parameters starts from 1
+                }
             }
-        }
-        return queryRange(typedQuery, firstResult, maxResults)
+            return queryRange(typedQuery, firstResult, maxResults)
                 .setHint(QueryHints.HINT_CACHEABLE, cacheable)
                 .getResultList();
+        } finally {
+            closeEntityManager();
+        }
     }
 
     /**
@@ -465,13 +495,17 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
     @Override
     public List<T> findByQueryAndNamedParams(boolean cacheable, int firstResult, int maxResults, String query, Map<String, ?> params) {
         EntityManager entityManager = getEntityManager();
-        TypedQuery<T> typedQuery = entityManager.createQuery(query, persistenceClass);
-        if (params != null) {
-            params.forEach(typedQuery::setParameter);
-        }
-        return queryRange(typedQuery, firstResult, maxResults)
+        try {
+            TypedQuery<T> typedQuery = entityManager.createQuery(query, persistenceClass);
+            if (params != null) {
+                params.forEach(typedQuery::setParameter);
+            }
+            return queryRange(typedQuery, firstResult, maxResults)
                 .setHint(QueryHints.HINT_CACHEABLE, cacheable)
                 .getResultList();
+        } finally {
+            closeEntityManager();
+        }
     }
 
     protected TypedQuery<T> queryRange(TypedQuery<T> query, int firstResult, int maxResults) {
@@ -487,6 +521,12 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
     }
 
     // HIBERNATE CRITERION API - TODO Migrate to JPA CRITERIA API!
+
+    protected void closeSession(Session session) {
+        if (session != null && session.isOpen()) {
+            session.close();
+        }
+    }
 
     /**
      * Find by criteria.
@@ -527,13 +567,18 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
     @Deprecated
     @SuppressWarnings("unchecked")
     public List<T> findByCriteria(boolean cacheable, int firstResult, int maxResults, List<Criterion> criterions) {
-        Criteria criteria = getSession().createCriteria(persistenceClass);
-        if (criterions != null) {
-            for (Criterion c : criterions) {
-                criteria.add(c);
+        Session session = getSession();
+        try {
+            Criteria criteria = session.createCriteria(persistenceClass);
+            if (criterions != null) {
+                for (Criterion c : criterions) {
+                    criteria.add(c);
+                }
             }
+            return criteriaRange(criteria, firstResult, maxResults).setCacheable(cacheable).list();
+        } finally {
+            closeSession(session);
         }
-        return criteriaRange(criteria, firstResult, maxResults).setCacheable(cacheable).list();
     }
 
     /**
@@ -566,15 +611,20 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
     @SuppressWarnings("unchecked")
     public <N extends Number> N countByCriteria(Class<N> resultClass, boolean cacheable,
                                                 ResultTransformer resultTransformer, List<Criterion> criterions) {
-        Criteria criteria = getSession().createCriteria(persistenceClass);
-        criteria.setProjection(Projections.rowCount());
-        criteria.setCacheable(cacheable);
-        if (criterions != null) {
-            for (Criterion c : criterions) {
-                criteria.add(c);
+        Session session = getSession();
+        try {
+            Criteria criteria = session.createCriteria(persistenceClass);
+            criteria.setProjection(Projections.rowCount());
+            criteria.setCacheable(cacheable);
+            if (criterions != null) {
+                for (Criterion c : criterions) {
+                    criteria.add(c);
+                }
             }
+            return (N) criteria.setResultTransformer(resultTransformer).uniqueResult();
+        } finally {
+            closeSession(session);
         }
-        return (N) criteria.setResultTransformer(resultTransformer).uniqueResult();
     }
 
     /**

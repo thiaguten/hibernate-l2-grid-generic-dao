@@ -40,7 +40,7 @@
   <logger name="org.apache.ignite" level="warn"/>
   <!--<logger name="com.zaxxer" level="debug"/>-->
   <!--<logger name="org.hibernate.jpa" level="debug"/>-->
-  <!--<logger name="org.hibernate.cache" level="debug"/>-->
+  <logger name="org.hibernate.cache" level="debug"/>
   <!--<logger name="org.hibernate.SQL" level="debug"/>-->
   <!--<logger name="org.hibernate.type" level="trace" />-->
   <!--<logger name="org.hibernate.hikari" level="debug" />-->

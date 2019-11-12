@@ -90,7 +90,8 @@ public class Env {
       props.put("hibernate.hikari.dataSource.url", url);
       props.put("hibernate.hikari.dataSource.user", user);
       props.put("hibernate.hikari.dataSource.password", password);
-      props.put("hibernate.hikari.maximumPoolSize", "100");
+//      props.put("hibernate.hikari.idleTimeout", Long.toString(TimeUnit.MINUTES.toMillis(10)));
+//      props.put("hibernate.hikari.maximumPoolSize", "20");
     } else if (ConnectionStrategy.DATA_SOURCE.equals(connectionStrategy)) {
       /*
         Although Hibernate can log SQL statements by setting the proper log appender or config,
