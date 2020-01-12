@@ -1,24 +1,25 @@
 package br.com.thiaguten.util;
 
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
+import java.time.*;
 
 public final class DateUtil {
+
+    public static final ZoneId SAO_PAULO_ZONE_ID = ZoneId.ofOffset("GMT", ZoneOffset.ofHours(-3));
+
+    public static final ZoneId DEFAULT_ZONE_ID =
+//            ZoneId.systemDefault();
+            SAO_PAULO_ZONE_ID;
 
     private DateUtil() {
         // not instantiable
     }
 
     public static ZonedDateTime epochMilliToZonedDateTime(long epochMilli) {
-        return ZonedDateTime.ofInstant(Instant.ofEpochMilli(epochMilli), ZoneId.systemDefault());
+        return ZonedDateTime.ofInstant(Instant.ofEpochMilli(epochMilli), DEFAULT_ZONE_ID);
     }
 
     public static LocalDateTime epochMilliToLocalDateTime(long epochMilli) {
-        return LocalDateTime.ofInstant(Instant.ofEpochMilli(epochMilli), ZoneId.systemDefault());
+        return LocalDateTime.ofInstant(Instant.ofEpochMilli(epochMilli), DEFAULT_ZONE_ID);
     }
 
     public static LocalDate epochMilliToLocalDate(long epochMilli) {
@@ -34,7 +35,7 @@ public final class DateUtil {
     }
 
     public static long localDateTimeToEpochMilli(LocalDateTime localDateTime) {
-        return zonedDateTimeToEpochMilli(localDateTime.atZone(ZoneId.systemDefault()));
+        return zonedDateTimeToEpochMilli(localDateTime.atZone(DEFAULT_ZONE_ID));
     }
 
     public static long localDateToEpochMilli(LocalDate localDate) {

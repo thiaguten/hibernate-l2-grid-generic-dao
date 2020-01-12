@@ -1,5 +1,7 @@
 package br.com.thiaguten.converter;
 
+import br.com.thiaguten.util.DateUtil;
+
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -18,11 +20,11 @@ public class LocalTimeConverter implements AttributeConverter<LocalTime, String>
 
 	// This class is immutable and thread-safe.
 	public static final DateTimeFormatter WRITE_FORMATTER = DateTimeFormatter.ofPattern("HH.mm.ss")
-			.withZone(ZoneId.systemDefault());
+			.withZone(DateUtil.DEFAULT_ZONE_ID);
 
 	// This class is immutable and thread-safe.
 	public static final DateTimeFormatter READ_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss")
-			.withZone(ZoneId.systemDefault());
+			.withZone(DateUtil.DEFAULT_ZONE_ID);
 
 	@Override
 	public String convertToDatabaseColumn(LocalTime attribute) {

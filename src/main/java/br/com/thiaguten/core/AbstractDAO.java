@@ -29,7 +29,6 @@ import org.hibernate.transform.ResultTransformer;
  *
  * @param <T>  the type of the persistent class
  * @param <ID> the type of the identifier
- *
  * @author Thiago Gutenberg Carvalho da Costa
  */
 public abstract class AbstractDAO<ID extends Serializable, T extends Persistable<ID>> implements IDAO<ID, T> {
@@ -48,7 +47,7 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
         this.persistenceClass = (Class<T>) genericSuperClass.getActualTypeArguments()[1];
     }
 
-    // methods for transactional control
+    // METODOS PARA CONTROLE TRANSACIONAL
 
     protected EntityTransaction getTransaction() {
         return getEntityManager().getTransaction();
@@ -131,8 +130,7 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
     }
 
     private T saveOrUpdateBehavior(EntityManager entityManager, T entity) {
-        ID id = entity.getId();
-        if (id != null) {
+        if (entity.hasID()) {
             // creates a new managed instance by coping the state from the passed entity
             entity = entityManager.merge(entity);
         } else {
@@ -146,28 +144,26 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
      * {@inheritDoc}
      */
     @Override
-    public T save(T entity) {
+    public T saveOrUpdate(T entity) {
         EntityManager entityManager = getEntityManager();
         try {
             beginTransaction();
-
             entity = saveOrUpdateBehavior(entityManager, entity);
-
             commitTransaction();
             return entity;
         } catch (Exception e) {
             rollbackTransaction();
             throw e;
         } finally {
-			      closeEntityManager();
-		    }
+            closeEntityManager();
+        }
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public List<T> saveInBatch(List<T> entities, int batchSize) {
+    public List<T> saveOrUpdateInBatch(List<T> entities, int batchSize) {
         EntityManager entityManager = getEntityManager();
         try {
             beginTransaction();
@@ -192,8 +188,8 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
             rollbackTransaction();
             throw e;
         } finally {
-			      closeEntityManager();
-		    }
+            closeEntityManager();
+        }
     }
 
     /**
@@ -209,35 +205,19 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
         }
     }
 
-//	public T findById(ID id, String graphName) {
-//		return findById(id, false, graphName);
-//	}
+//		public T findById(ID id, String graphName) {
+//			return findById(id, false, graphName);
+//		}
 //
-//	@SuppressWarnings("unchecked")
-//	public T findById(ID id, boolean cacheable, String graphName) {
-//		EntityManager entityManager = getEntityManager();
-//		EntityGraph<T> entityGraph = (EntityGraph<T>) entityManager.createEntityGraph(graphName);
-//		Map<String, Object> hints = new HashMap<>();
-//		hints.put(QueryHints.HINT_FETCHGRAPH, entityGraph);
-//		hints.put(QueryHints.HINT_CACHEABLE, cacheable);
-//		return entityManager.find(persistenceClass, id, hints);
-//	}
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public T update(T entity) {
-        return save(entity);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public List<T> updateInBatch(List<T> entities, int batchSize) {
-        return saveInBatch(entities, batchSize);
-    }
+//		@SuppressWarnings("unchecked")
+//		public T findById(ID id, boolean cacheable, String graphName) {
+//			EntityManager entityManager = getEntityManager();
+//			EntityGraph<T> entityGraph = (EntityGraph<T>) entityManager.createEntityGraph(graphName);
+//			Map<String, Object> hints = new HashMap<>();
+//			hints.put(QueryHints.HINT_FETCHGRAPH, entityGraph);
+//			hints.put(QueryHints.HINT_CACHEABLE, cacheable);
+//			return entityManager.find(persistenceClass, id, hints);
+//		}
 
     /**
      * {@inheritDoc}
@@ -266,8 +246,8 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
             rollbackTransaction();
             throw e;
         } finally {
-			      closeEntityManager();
-		    }
+            closeEntityManager();
+        }
     }
 
     /**
@@ -289,8 +269,8 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
             CriteriaQuery<Long> criteriaQuery = criteriaBuilder.createQuery(Long.class);
             criteriaQuery.select(criteriaBuilder.count(criteriaQuery.from(persistenceClass)));
             Long countResult = entityManager.createQuery(criteriaQuery)
-                .setHint(QueryHints.HINT_CACHEABLE, cacheable)
-                .getSingleResult();
+                    .setHint(QueryHints.HINT_CACHEABLE, cacheable)
+                    .getSingleResult();
             return null == countResult ? 0L : countResult;
         } finally {
             closeEntityManager();
@@ -375,8 +355,8 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
             CriteriaQuery<T> cq = entityManager.getCriteriaBuilder().createQuery(persistenceClass);
             TypedQuery<T> createQuery = entityManager.createQuery(cq.select(cq.from(persistenceClass)));
             return queryRange(createQuery, firstResult, maxResults)
-                .setHint(QueryHints.HINT_CACHEABLE, cacheable)
-                .getResultList();
+                    .setHint(QueryHints.HINT_CACHEABLE, cacheable)
+                    .getResultList();
         } finally {
             closeEntityManager();
         }
@@ -466,8 +446,8 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
                 }
             }
             return queryRange(typedQuery, firstResult, maxResults)
-                .setHint(QueryHints.HINT_CACHEABLE, cacheable)
-                .getResultList();
+                    .setHint(QueryHints.HINT_CACHEABLE, cacheable)
+                    .getResultList();
         } finally {
             closeEntityManager();
         }
@@ -493,7 +473,8 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
      * {@inheritDoc}
      */
     @Override
-    public List<T> findByQueryAndNamedParams(boolean cacheable, int firstResult, int maxResults, String query, Map<String, ?> params) {
+    public List<T> findByQueryAndNamedParams(boolean cacheable, int firstResult, int maxResults, String query,
+                                             Map<String, ?> params) {
         EntityManager entityManager = getEntityManager();
         try {
             TypedQuery<T> typedQuery = entityManager.createQuery(query, persistenceClass);
@@ -501,8 +482,8 @@ public abstract class AbstractDAO<ID extends Serializable, T extends Persistable
                 params.forEach(typedQuery::setParameter);
             }
             return queryRange(typedQuery, firstResult, maxResults)
-                .setHint(QueryHints.HINT_CACHEABLE, cacheable)
-                .getResultList();
+                    .setHint(QueryHints.HINT_CACHEABLE, cacheable)
+                    .getResultList();
         } finally {
             closeEntityManager();
         }

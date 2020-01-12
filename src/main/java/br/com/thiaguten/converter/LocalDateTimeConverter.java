@@ -1,5 +1,7 @@
 package br.com.thiaguten.converter;
 
+import br.com.thiaguten.util.DateUtil;
+
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -17,10 +19,10 @@ import javax.persistence.Converter;
 public class LocalDateTimeConverter implements AttributeConverter<LocalDateTime, String> {
 
 	public static final DateTimeFormatter WRITE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd-HH.mm.ss.SSSSSS")
-			.withZone(ZoneId.systemDefault());
+			.withZone(DateUtil.DEFAULT_ZONE_ID);
 
 	public static final DateTimeFormatter READ_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSS")
-			.withZone(ZoneId.systemDefault());
+			.withZone(DateUtil.DEFAULT_ZONE_ID);
 
 	@Override
 	public String convertToDatabaseColumn(LocalDateTime attribute) {
