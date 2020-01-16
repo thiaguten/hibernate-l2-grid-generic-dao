@@ -41,13 +41,13 @@ public class Test {
     logger.debug(">>> CREATING - " + crudInfo);
     Post post = new Post("insertTest", new PostDetails("Thiago"));
     post.setId(postIdSupplier.getNextIdAsLong());
-    Post postSaved = postDAO.save(post);
+    Post postSaved = postDAO.saveOrUpdate(post);
     logger.debug(">>> CREATED - " + crudInfo + " - {}", postSaved);
 
     logger.debug(">>> UPDATING - " + crudInfo);
     postSaved.setTitle("updateTest");
     postSaved.addPostComment(new PostComment("Nice post!"));
-    Post postUpdated = postDAO.update(postSaved);
+    Post postUpdated = postDAO.saveOrUpdate(postSaved);
     logger.debug(">>> UPDATED - " + crudInfo + " - {}", postUpdated);
 
     logger.debug(">>> READING - " + crudInfo);
@@ -74,7 +74,7 @@ public class Test {
       post.setId(postIdSupplier.getNextIdAsLong());
       posts.add(post);
     }
-    List<Post> postsSaved = postDAO.saveInBatch(posts, Env.batchSize);
+    List<Post> postsSaved = postDAO.saveOrUpdateInBatch(posts, Env.batchSize);
     logger.debug(">>> BATCH CREATED - " + crudInfo + " - {}", postsSaved);
 
     logger.debug(">>> BATCH UPDATING - " + crudInfo);
@@ -85,7 +85,7 @@ public class Test {
         post.addPostComment(new PostComment("Nice post!" + id + j));
       }
     }
-    List<Post> postsUpdated =  postDAO.updateInBatch(postsSaved, Env.batchSize);
+    List<Post> postsUpdated =  postDAO.saveOrUpdateInBatch(postsSaved, Env.batchSize);
     logger.debug(">>> BATCH UPDATED - " + crudInfo + " - {}", postsUpdated);
 
     // TODO I'll continue later with the other CRUD operations.
