@@ -12,6 +12,7 @@
   <description>Hibernate L2 Grid Cache with Apache Ignite and Generic DAO abstraction example</description>
 
   <repositories>
+  	<!-- GridGain Maven Repository containing Apache Ignite LGPL artifacts 
     <repository>
       <id>gridgain</id>
       <name>GridGain Maven repository</name>
@@ -19,6 +20,19 @@
       <snapshots>
         <enabled>false</enabled>
       </snapshots>
+    </repository>-->
+    <!-- Embedded Project Maven Repository containing Apache Ignite LGPL artifacts -->
+    <repository>
+      <id>embedded-project-repository</id>
+      <name>lib</name>
+      <releases>
+        <enabled>true</enabled>
+        <checksumPolicy>ignore</checksumPolicy>
+      </releases>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+      <url>file://${project.basedir}/lib</url>
     </repository>
   </repositories>
 
@@ -31,6 +45,11 @@
     <dependency>
       <groupId>org.apache.ignite</groupId>
       <artifactId>ignite-spring</artifactId>
+      <version>${ignite.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.ignite</groupId>
+      <artifactId>ignite-indexing</artifactId>
       <version>${ignite.version}</version>
     </dependency>
     <!--
@@ -92,7 +111,7 @@
     <dependency>
       <groupId>org.hsqldb</groupId>
       <artifactId>hsqldb</artifactId>
-      <version>2.5.0</version>
+      <version>2.5.1</version>
     </dependency>
     <!-- Log -->
     <dependency>
@@ -124,19 +143,12 @@
     <dependency>
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-lang3</artifactId>
-      <version>3.9</version>
+      <version>3.11</version>
     </dependency>
     <dependency>
       <groupId>net.ttddyy</groupId>
       <artifactId>datasource-proxy</artifactId>
-      <version>1.5.1</version>
-    </dependency>
-    <!-- Test -->
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>4.13.1</version>
-      <scope>test</scope>
+      <version>1.7</version>
     </dependency>
   </dependencies>
 
@@ -145,8 +157,8 @@
     <maven.compiler.target>1.8</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <hibernate.version>5.1.5.Final</hibernate.version>
-    <slf4j.version>1.7.25</slf4j.version>
-    <ignite.version>2.7.2</ignite.version>
+    <slf4j.version>1.7.30</slf4j.version>
+    <ignite.version>2.9.1</ignite.version>
   </properties>
 
 </project>

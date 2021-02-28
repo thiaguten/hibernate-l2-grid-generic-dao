@@ -29,7 +29,7 @@
         The %highlight conversion specifier prints its sub-pattern in bold-red for events of level
         ERROR, in red for WARN, in BLUE for INFO, and in the default color for other levels.
     -->
-    <withJansi>true</withJansi>
+    <withJansi>false</withJansi>
     <encoder>
 <!--      <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{0} - %msg%n%rEx</pattern>-->
       <pattern>%d [%thread] %highlight(%-5level) %cyan(%logger{80}) - %msg%n%rEx</pattern>

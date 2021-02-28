@@ -1,0 +1,6 @@
+#NOTE: This is a Maven Resolver internal implementation file, its format can be changed without prior notice.
+#Sun Feb 28 12:20:05 BRT 2021
+ignite-hibernate-core-2.9.1-javadoc.jar>=
+ignite-hibernate-core-2.9.1.pom>=
+ignite-hibernate-core-2.9.1-sources.jar>=
+ignite-hibernate-core-2.9.1.jar>=

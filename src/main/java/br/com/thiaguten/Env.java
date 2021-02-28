@@ -18,6 +18,7 @@ import static org.hibernate.cfg.AvailableSettings.USE_STRUCTURED_CACHE;
 import com.zaxxer.hikari.HikariDataSource;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -54,7 +55,10 @@ public class Env {
   }
 
   public static Ignite startIgnite() {
+	String targetDir = Paths.get("", "target").toAbsolutePath().toString();
+	System.setProperty(org.apache.ignite.IgniteSystemProperties.IGNITE_HOME, targetDir);
     System.setProperty(org.apache.ignite.IgniteSystemProperties.IGNITE_QUIET, "true");
+    System.setProperty(org.apache.ignite.IgniteSystemProperties.IGNITE_PERFORMANCE_SUGGESTIONS_DISABLED, "true");
     System.setProperty("java.net.preferIPv4Stack", "true");
     Ignite ignite = Ignition.start("hibernate-l2-grid.xml");
     Runtime.getRuntime().addShutdownHook(new Thread(ignite::close));
